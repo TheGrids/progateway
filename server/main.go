@@ -4,6 +4,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"progateway.ru/m/v2/models"
+	"progateway.ru/m/v2/services"
 	"time"
 )
 
@@ -19,6 +20,15 @@ func main() {
 		AllowCredentials: true,
 		MaxAge:           1 * time.Minute,
 	}))
+
+	api := r.Group("/api")
+	{
+		auth := api.Group("/auth")
+		{
+			auth.POST("/signup", services.SignUp)
+			auth.POST("/signin", services.SignIn)
+		}
+	}
 
 	err := r.Run()
 	if err != nil {
