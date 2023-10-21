@@ -26,7 +26,21 @@ const routes = [
 		name: 'Home',
 		component: () => import('../views/Home.vue')
 	},
-
+	{
+		path: '/request',
+		name: 'Request',
+		component: () => import('../views/Request.vue')
+	},
+	{
+		path: '/internship',
+		name: 'Internship',
+		component: () => import('../views/Internship.vue')
+	},
+	{
+		path: '/activate/:token',
+		name: 'Activate',
+		component: () => import('../views/Activate.vue')
+	},
 
 
 	{

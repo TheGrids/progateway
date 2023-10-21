@@ -1,4 +1,5 @@
 <template>
+<notifications />
 	<Header />
 	<router-view/>
 </template>
@@ -15,5 +16,5 @@ export default {
 </script>
 
 <style scoped>
-
+@import '/css/style.css';
 </style>

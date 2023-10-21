@@ -35,12 +35,20 @@ a {
     padding: 15px 0;
     border-radius: 20px;
 }
-.btn:hover {
+.btn:hover, .btn-icon:hover {
     cursor: pointer;
+}
+.btn-icon {
+    background: transparent;
+    padding: 5px;
 }
 
 .btn.white {
     background-color: #fff;
+}
+.btn.green {
+    background-color: #3AA935;
+    color: #fff;
 }
 
 .input__wrap {
