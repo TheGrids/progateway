@@ -84,7 +84,7 @@ func SignIn(c *gin.Context) {
 	models.DB.Create(&token)
 
 	// Установка refresh токена в файл cookie
-	c.SetCookie("refresh_token", token.Token, 60*60*24*30, "/api/auth", os.Getenv("COOKIE_DOMAIN"), secure(), true)
+	c.SetCookie("refresh_token", token.Token, 60*60*24*30, "/api", os.Getenv("COOKIE_DOMAIN"), secure(), true)
 	c.JSON(http.StatusOK, gin.H{"access": createToken(user, 15)})
 }
 
@@ -97,7 +97,7 @@ func Logout(c *gin.Context) {
 		models.DB.Delete(&token)
 	}
 
-	c.SetCookie("refresh_token", "", -1, "/api/auth", os.Getenv("COOKIE_DOMAIN"), secure(), true)
+	c.SetCookie("refresh_token", "", -1, "/api", os.Getenv("COOKIE_DOMAIN"), secure(), true)
 	c.JSON(http.StatusOK, gin.H{"msg": "Успешно"})
 }
 
@@ -154,7 +154,7 @@ func refresh(c *gin.Context) (uuid.UUID, error) {
 
 	models.DB.Model(&token).Updates(token)
 
-	c.SetCookie("refresh_token", token.Token, 60*60*24*30, "/api/auth", os.Getenv("COOKIE_DOMAIN"), secure(), true)
+	c.SetCookie("refresh_token", token.Token, 60*60*24*30, "/api", os.Getenv("COOKIE_DOMAIN"), secure(), true)
 	c.Header("access", access)
 	return user.ID, nil
 }
