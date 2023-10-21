@@ -24,7 +24,8 @@ func main() {
 	api := r.Group("/api")
 	{
 		{
-			//api.GET("/biba", services.Biba)
+			api.GET("/alltest", services.GetAllTest)
+			api.GET("/testabc", services.AddTest) //временно
 			api.GET("/test/:id", services.Test)
 			api.POST("/submit/:testID", services.SubmitTest)
 		}
