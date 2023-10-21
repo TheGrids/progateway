@@ -76,7 +76,7 @@ func SignIn(c *gin.Context) {
 
 	var token models.Tokens
 
-	token.ID = user.ID
+	token.UserID = user.ID
 	token.Token = uuid.New().String()
 	token.IP = c.ClientIP()
 	token.Browser = c.Request.UserAgent()
