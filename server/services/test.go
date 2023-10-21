@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"progateway.ru/m/v2/models"
@@ -206,7 +207,7 @@ func AddTest(con *gin.Context) {
 }
 
 func Test(c *gin.Context) {
-	_, ok := CheckToken(c)
+	_, ok := CheckToken(c, 1)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"msg": "Недостаточно прав"})
 		return
@@ -240,7 +241,8 @@ func Test(c *gin.Context) {
 }
 
 func GetAllTest(c *gin.Context) {
-	_, ok := CheckToken(c)
+	id, ok := CheckToken(c, 1)
+	fmt.Println(id)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"msg": "Недостаточно прав"})
 		return
@@ -252,7 +254,7 @@ func GetAllTest(c *gin.Context) {
 }
 
 func SubmitTest(c *gin.Context) {
-	id, ok := CheckToken(c)
+	id, ok := CheckToken(c, 1)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"msg": "Недостаточно прав"})
 		return

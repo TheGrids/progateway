@@ -34,6 +34,7 @@ func SignUp(c *gin.Context) {
 		return
 	}
 	input.Password = hash
+	input.Role = 0
 
 	// Сохранение пользователя в БД
 	models.DB.Create(&input)
@@ -63,7 +64,7 @@ func SignIn(c *gin.Context) {
 		return
 	}
 
-	if !user.EmailCheck {
+	if user.Role == 0 {
 		c.JSON(http.StatusForbidden, gin.H{"msg": "Подтвердите адрес электронной почты"})
 		return
 	}
@@ -115,6 +116,7 @@ func createToken(user models.User, minutes int) string {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"userid": user.ID,
 		"email":  user.Email,
+		"role":   user.Role,
 		"exp":    time.Now().Add(time.Minute * time.Duration(minutes)).Unix(),
 	})
 
@@ -144,7 +146,7 @@ func refresh(c *gin.Context) (uuid.UUID, error) {
 
 	var user models.User
 
-	models.DB.Where("id=?", token.ID).First(&user)
+	models.DB.Where("id=?", token.UserID).First(&user)
 
 	access := createToken(user, 15)
 	token.UserID = user.ID
@@ -159,10 +161,11 @@ func refresh(c *gin.Context) (uuid.UUID, error) {
 	return user.ID, nil
 }
 
-func CheckToken(c *gin.Context) (uuid.UUID, bool) {
+func CheckToken(c *gin.Context, role uint) (uuid.UUID, bool) {
 	type MyCustomClaims struct {
 		ID    uuid.UUID `json:"userid"`
 		Email string    `json:"email"`
+		Role  uint      `json:"role"`
 		jwt.StandardClaims
 	}
 
@@ -171,16 +174,29 @@ func CheckToken(c *gin.Context) (uuid.UUID, bool) {
 	})
 
 	if err == nil {
-		if _, ok := tokenParse.Claims.(*MyCustomClaims); ok && tokenParse.Valid {
-			return tokenParse.Claims.(*MyCustomClaims).ID, true
+		if parsing, ok := tokenParse.Claims.(*MyCustomClaims); ok && tokenParse.Valid { // если access токен валидный
+			var user models.User
+			if err := models.DB.Where("id=?", parsing.ID).First(&user).Error; err != nil { // поиск роли юзера
+				if user.Role != parsing.Role { // если роль не совпадает
+					id, err := refresh(c) // пробуем рефрешить access токен
+					if err != nil {       // если не получилось - выбиваем юзера
+						return uuid.Nil, false
+					}
+					if user.Role < role { // если роль ниже необходимой - выбиваем юзера
+						return uuid.Nil, false
+					}
+					return id, true // успех
+				}
+			}
+
 		}
 	}
 
-	id, err := refresh(c)
-	if err != nil {
+	id, err := refresh(c) // если токен отсутствует, то производим рефреш
+	if err != nil {       // при ошибке выбиваем юзера
 		return uuid.Nil, false
 	}
-	return id, true
+	return id, true // успех
 }
 
 func Activate(c *gin.Context) {
@@ -191,7 +207,7 @@ func Activate(c *gin.Context) {
 	}
 
 	user := models.User{}
-	userUpdate := models.User{EmailCheck: true}
+	userUpdate := models.User{Role: 1}
 
 	if err := models.DB.Where("id=?", emailCheck.ID).First(&user).Error; err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"msg": "Аккаунт не найден!"})
