@@ -3,6 +3,7 @@ package services
 import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
 	"os"
@@ -37,6 +38,11 @@ func SignUp(c *gin.Context) {
 	// Сохранение пользователя в БД
 	models.DB.Create(&input)
 
+	emailCheck := models.EmailCheck{ID: input.ID, UUID: uuid.New().String()}
+	models.DB.Create(&emailCheck)
+
+	SendEmailUUID(input.Email, emailCheck.UUID)
+
 	c.JSON(http.StatusOK, gin.H{"msg": "Мы отправили письмо с подтверждением на вашу электронную почту. Вы сможете зайти на аккант только после подтверждения."})
 }
 
@@ -57,19 +63,44 @@ func SignIn(c *gin.Context) {
 		return
 	}
 
+	if !user.EmailCheck {
+		c.JSON(http.StatusForbidden, gin.H{"msg": "Подтвердите адрес электронной почты"})
+		return
+	}
+
 	// Проверка пароля
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password)); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"msg": "Неверная почта или пароль."})
 		return
 	}
 
-	secure := true
-	if os.Getenv("COOKIE_SECURE") == "false" {
-		secure = false
+	var token models.Tokens
+
+	token.ID = user.ID
+	token.Token = uuid.New().String()
+	token.IP = c.ClientIP()
+	token.Browser = c.Request.UserAgent()
+
+	if err := models.DB.Create(&token).Error; err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"msg": "Ошибка сервера."})
+		return
 	}
 
 	// Установка refresh токена в файл cookie
-	c.SetCookie("refresh_token", createToken(user, 60*24*30), 60*60*24*30, "/api/auth", os.Getenv("COOKIE_DOMAIN"), secure, true) // if https: secure = true
+	c.SetCookie("refresh_token", token.Token, 60*60*24*30, "/api/auth", os.Getenv("COOKIE_DOMAIN"), secure(), true)
+	c.JSON(http.StatusOK, gin.H{"access": createToken(user, 15)})
+}
+
+func Logout(c *gin.Context) {
+
+	var token models.Tokens
+	refresh, _ := c.Cookie("refresh_token")
+
+	if err := models.DB.Where("token=?", refresh).First(&token).Error; err == nil {
+		models.DB.Delete(&token)
+	}
+
+	c.SetCookie("refresh_token", "", -1, "/api/auth", os.Getenv("COOKIE_DOMAIN"), secure(), true)
 	c.JSON(http.StatusOK, gin.H{"msg": "Успешно"})
 }
 
@@ -92,4 +123,84 @@ func createToken(user models.User, minutes int) string {
 
 	jwtToken, _ := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
 	return jwtToken
+}
+
+func secure() bool {
+	if os.Getenv("COOKIE_SECURE") == "false" {
+		return false
+	}
+	return true
+}
+
+func refresh(c *gin.Context) (uuid.UUID, error) {
+	tokenRefresh, err := c.Cookie("refresh_token")
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	var token models.Tokens
+
+	if err := models.DB.Where("token=?", tokenRefresh).First(&token).Error; err != nil {
+		c.SetCookie("refresh_token", "", -1, "/", "", false, true)
+		return uuid.Nil, err
+	}
+
+	var user models.User
+
+	models.DB.Where("id=?", token.ID).First(&user)
+
+	access := createToken(user, 15)
+	token.ID = user.ID
+	token.Token = uuid.New().String()
+	token.IP = c.ClientIP()
+	token.Browser = c.Request.UserAgent()
+
+	models.DB.Model(&token).Updates(token)
+
+	c.SetCookie("refresh_token", token.Token, 60*60*24*30, "/api/auth", os.Getenv("COOKIE_DOMAIN"), secure(), true)
+	c.Header("access", access)
+	return user.ID, nil
+}
+
+func CheckToken(c *gin.Context) (uuid.UUID, bool) {
+	type MyCustomClaims struct {
+		ID    uuid.UUID `json:"userid"`
+		Email string    `json:"email"`
+		jwt.StandardClaims
+	}
+
+	tokenParse, _ := jwt.ParseWithClaims(c.Request.Header.Get("access"), &MyCustomClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(os.Getenv("JWT_SECRET")), nil
+	})
+
+	if _, ok := tokenParse.Claims.(*MyCustomClaims); ok && tokenParse.Valid {
+		return tokenParse.Claims.(*MyCustomClaims).ID, true
+	}
+	id, err := refresh(c)
+	if err != nil {
+		return uuid.Nil, false
+	}
+	return id, true
+}
+
+func Activate(c *gin.Context) {
+	emailCheck := models.EmailCheck{}
+	if err := models.DB.Where("uuid=?", c.Param("uuid")).First(&emailCheck).Error; err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"msg": "Подтверждение не существует или недействительно!"})
+		return
+	}
+
+	user := models.User{}
+	userUpdate := models.User{EmailCheck: true}
+
+	if err := models.DB.Where("id=?", emailCheck.ID).First(&user).Error; err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"msg": "Аккаунт не найден!"})
+		models.DB.Delete(&emailCheck)
+		return
+	}
+
+	models.DB.Model(&user).Updates(userUpdate)
+	models.DB.Delete(&emailCheck)
+
+	c.JSON(http.StatusOK, gin.H{"msg": "Аккаунт успешно активирован!"})
 }

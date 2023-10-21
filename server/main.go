@@ -27,6 +27,8 @@ func main() {
 		{
 			auth.POST("/signup", services.SignUp)
 			auth.POST("/signin", services.SignIn)
+			auth.GET("/logout", services.Logout)
+			api.GET("/activate/:uuid", services.Activate)
 		}
 	}
 
