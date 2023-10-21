@@ -176,7 +176,7 @@ func CheckToken(c *gin.Context, role uint) (uuid.UUID, bool) {
 	if err == nil {
 		if parsing, ok := tokenParse.Claims.(*MyCustomClaims); ok && tokenParse.Valid { // если access токен валидный
 			var user models.User
-			if err := models.DB.Where("id=?", parsing.ID).First(&user).Error; err != nil { // поиск роли юзера
+			if err := models.DB.Where("id=?", parsing.ID).First(&user).Error; err == nil { // поиск роли юзера
 				if user.Role != parsing.Role { // если роль не совпадает
 					id, err := refresh(c) // пробуем рефрешить access токен
 					if err != nil {       // если не получилось - выбиваем юзера
