@@ -178,15 +178,15 @@ func CheckToken(c *gin.Context, role uint) (uuid.UUID, bool) {
 			var user models.User
 			if err := models.DB.Where("id=?", parsing.ID).First(&user).Error; err == nil { // поиск роли юзера
 				if user.Role != parsing.Role { // если роль не совпадает
-					id, err := refresh(c) // пробуем рефрешить access токен
-					if err != nil {       // если не получилось - выбиваем юзера
+					_, err := refresh(c) // пробуем рефрешить access токен
+					if err != nil {      // если не получилось - выбиваем юзера
 						return uuid.Nil, false
 					}
 					if user.Role < role { // если роль ниже необходимой - выбиваем юзера
 						return uuid.Nil, false
 					}
-					return id, true // успех
 				}
+				return parsing.ID, true // успех
 			}
 
 		}
