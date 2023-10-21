@@ -23,7 +23,8 @@ type SignIn struct {
 }
 
 type Tokens struct {
-	ID        uuid.UUID `json:"id" binding:"required"`
+	ID        uuid.UUID `gorm:"primary_key; type:uuid; default:uuid_generate_v4()" json:"id"`
+	UserID    uuid.UUID `json:"user_id" binding:"required"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	DeletedAt time.Time `json:"deleted_at"`
