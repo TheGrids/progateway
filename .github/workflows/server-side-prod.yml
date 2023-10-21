@@ -29,7 +29,7 @@ jobs:
         known_hosts: 'just-a-placeholder-so-we-dont-get-errors'
     - name: Adding Known Hosts
       run: ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
-      working-directory: server/
+      working-directory: .
 
     - name: Setup environment variables
       run: |
@@ -41,6 +41,7 @@ jobs:
         echo "EMAIL_HTTP=${{ secrets.EMAIL_HTTP }}" >> .env
         echo "COOKIE_SECURE=${{ secrets.COOKIE_SECURE }}" >> .env
         echo "COOKIE_DOMAIN=${{ secrets.COOKIE_DOMAIN }}" >> .env
+      working-directory: server/
 
     - uses: actions/checkout@master
 
@@ -53,7 +54,7 @@ jobs:
         environment: prod
 
     - name: Deploy static content to local server (rsync)
-      run: rsync -avz / ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/home/admin/progateway/server
+      run: rsync -avz server/ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/home/admin/progateway/server
 
     - name: Connect to server
       uses: appleboy/ssh-action@master
