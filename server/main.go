@@ -23,6 +23,12 @@ func main() {
 
 	api := r.Group("/api")
 	{
+		{
+			api.GET("/alltest", services.GetAllTest)
+			api.GET("/testabc", services.AddTest) //временно
+			api.GET("/test/:id", services.Test)
+			api.POST("/submit/:testID", services.SubmitTest)
+		}
 		auth := api.Group("/auth")
 		{
 			auth.POST("/signup", services.SignUp)

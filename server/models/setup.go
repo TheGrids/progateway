@@ -14,7 +14,7 @@ func ConnectionDataBase() {
 	// Checking .env file
 	err := godotenv.Load()
 	if err != nil {
-		return
+		panic(err)
 	}
 	dsn, exist := os.LookupEnv("POSTGRES_CONNECT")
 	if !exist {
@@ -29,7 +29,7 @@ func ConnectionDataBase() {
 	}
 
 	// Adding schema to database
-	err = database.AutoMigrate(&User{}, &Tokens{}, &EmailCheck{})
+	err = database.AutoMigrate(&User{}, &Tokens{}, &EmailCheck{}, &Test{}, &Answer{}, &Question{}, &UserTestResult{}, &UserAnswer{})
 	if err != nil {
 		return
 	}

@@ -166,13 +166,16 @@ func CheckToken(c *gin.Context) (uuid.UUID, bool) {
 		jwt.StandardClaims
 	}
 
-	tokenParse, _ := jwt.ParseWithClaims(c.Request.Header.Get("access"), &MyCustomClaims{}, func(token *jwt.Token) (interface{}, error) {
+	tokenParse, err := jwt.ParseWithClaims(c.Request.Header.Get("access"), &MyCustomClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(os.Getenv("JWT_SECRET")), nil
 	})
 
-	if _, ok := tokenParse.Claims.(*MyCustomClaims); ok && tokenParse.Valid {
-		return tokenParse.Claims.(*MyCustomClaims).ID, true
+	if err == nil {
+		if _, ok := tokenParse.Claims.(*MyCustomClaims); ok && tokenParse.Valid {
+			return tokenParse.Claims.(*MyCustomClaims).ID, true
+		}
 	}
+
 	id, err := refresh(c)
 	if err != nil {
 		return uuid.Nil, false
