@@ -81,10 +81,7 @@ func SignIn(c *gin.Context) {
 	token.IP = c.ClientIP()
 	token.Browser = c.Request.UserAgent()
 
-	if err := models.DB.Create(&token).Error; err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"msg": "Ошибка сервера."})
-		return
-	}
+	models.DB.Create(&token)
 
 	// Установка refresh токена в файл cookie
 	c.SetCookie("refresh_token", token.Token, 60*60*24*30, "/api/auth", os.Getenv("COOKIE_DOMAIN"), secure(), true)
