@@ -147,7 +147,7 @@ func refresh(c *gin.Context) (uuid.UUID, error) {
 	models.DB.Where("id=?", token.ID).First(&user)
 
 	access := createToken(user, 15)
-	token.ID = user.ID
+	token.UserID = user.ID
 	token.Token = uuid.New().String()
 	token.IP = c.ClientIP()
 	token.Browser = c.Request.UserAgent()
